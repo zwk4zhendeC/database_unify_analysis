@@ -1,0 +1,53 @@
+# Spicepod 是一个配置包，用于定义特定于应用程序的数据集、目录、机器学习 (ML) 模型和密钥。它的功能类似于代码打包系统（例如 npm 或 pip），但它是为数据和 AI 组件而非代码库而设计的。
+version: v1
+kind: Spicepod
+name: spice_qs
+dependencies:
+- spiceai/quickstart
+datasets:
+  - from: postgres:public.attacker_ip
+    name: pg_attacker_ip
+    params:
+      pg_host: localhost
+      pg_port: 5432
+      pg_db: postgres
+      pg_user: root
+      pg_pass: 123456
+      pg_sslmode: disable
+  - from: postgres:public.city
+    name: pg_city
+    params:
+      pg_host: localhost
+      pg_port: 5432
+      pg_db: postgres
+      pg_user: root
+      pg_pass: 123456
+      pg_sslmode: disable
+  - from: clickhouse:test_db.attacker_ip
+    name: ck_attacker_ip
+    params:
+      clickhouse_host: localhost
+      clickhouse_tcp_port: 9000
+      clickhouse_db: test_db
+      clickhouse_user: default
+      clickhouse_pass: default
+      clickhouse_secure: false
+      connection_timeout: 10000
+  - from: clickhouse:test_db.city
+    name: ck_city
+    params:
+      clickhouse_host: localhost
+      clickhouse_tcp_port: 9000
+      clickhouse_db: test_db
+      clickhouse_user: default
+      clickhouse_pass: default
+      clickhouse_secure: false
+      connection_timeout: 10000
+  - from: file:data/attacker_ip.csv
+    name: csv_attacker_ip
+    params:
+      file_format: csv
+  - from: file:data/city.csv
+    name: csv_city
+    params:
+      file_format: csv

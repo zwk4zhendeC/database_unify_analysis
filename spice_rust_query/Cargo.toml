@@ -1,0 +1,15 @@
+[package]
+name = "spice_rust_query"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.102"
+arrow = { version = "55.2.0", features = ["prettyprint"] }
+clickhouse = "0.13.3"
+futures = "0.3.32"
+reqwest = { version = "0.12.22", default-features = false, features = ["rustls-tls"] }
+serde = { version = "1.0.219", features = ["derive"] }
+spiceai = "3.0.0"
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread"] }
+tokio-postgres = "0.7.13"

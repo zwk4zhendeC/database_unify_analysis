@@ -1,0 +1,56 @@
+version: v1
+kind: Spicepod
+name: spice_rust_query_perf
+
+datasets:
+  - from: postgres:public.attacker_ip_perf
+    name: pg_attacker_ip_perf
+    params:
+      pg_host: localhost
+      pg_port: 5432
+      pg_db: postgres
+      pg_user: root
+      pg_pass: 123456
+      pg_sslmode: disable
+
+  - from: postgres:public.city_perf
+    name: pg_city_perf
+    params:
+      pg_host: localhost
+      pg_port: 5432
+      pg_db: postgres
+      pg_user: root
+      pg_pass: 123456
+      pg_sslmode: disable
+
+  - from: clickhouse:test_db.attacker_ip_perf
+    name: ck_attacker_ip_perf
+    params:
+      clickhouse_host: localhost
+      clickhouse_tcp_port: 9000
+      clickhouse_db: test_db
+      clickhouse_user: default
+      clickhouse_pass: default
+      clickhouse_secure: false
+      connection_timeout: 10000
+
+  - from: clickhouse:test_db.city_perf
+    name: ck_city_perf
+    params:
+      clickhouse_host: localhost
+      clickhouse_tcp_port: 9000
+      clickhouse_db: test_db
+      clickhouse_user: default
+      clickhouse_pass: default
+      clickhouse_secure: false
+      connection_timeout: 10000
+
+  - from: file:../../.run/data/csv/attacker_ip_perf.csv
+    name: csv_attacker_ip_perf
+    params:
+      file_format: csv
+
+  - from: file:../../.run/data/csv/city_perf.csv
+    name: csv_city_perf
+    params:
+      file_format: csv

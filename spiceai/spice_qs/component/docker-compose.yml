@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-sink-test
+    environment:
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "123456"
+      POSTGRES_DB: "default"
+    ports:
+      - "5432:5432"
+  clickhouse-server:
+    image: clickhouse/clickhouse-server:26.1-alpine
+    container_name: clickhouse-server
+    ports:
+      - "8123:8123"   # HTTP 接口（SQL over HTTP）
+      - "9000:9000"   # Native TCP 接口（SQL 客户端链接）
+      - "9009:9009"   # Interserver 复制/通讯端口（仅在集群配置时用到）
+
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    restart: always
