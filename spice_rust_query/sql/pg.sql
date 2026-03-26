@@ -1,21 +1,18 @@
-drop table if exists attacker_ip_perf;
-CREATE TABLE if not exists attacker_ip_perf (
-    id BIGSERIAL PRIMARY KEY,  -- 使用 BIGSERIAL 实现自增
-    attacker_ip VARCHAR(50),
-    city_id bigint,
-    city_name VARCHAR(50)
-);
-drop table if exists city_perf;
-CREATE TABLE if not exists city_perf (
-    id BIGSERIAL PRIMARY KEY,  -- 使用 BIGSERIAL 实现自增
+CREATE TABLE IF NOT EXISTS public.city_perf (
+    id BIGSERIAL PRIMARY KEY,
     city_name VARCHAR(50),
     nation VARCHAR(50)
 );
 
-select * from attacker_ip_perf where attacker_ip='172.152.149.97';
+CREATE TABLE IF NOT EXISTS public.attacker_ip_perf (
+    id BIGSERIAL PRIMARY KEY,
+    attacker_ip VARCHAR(50),
+    city_id BIGINT,
+    city_name VARCHAR(50)
+);
 
-CREATE INDEX idx_ip
-ON attacker_ip_perf (attacker_ip);
+CREATE INDEX IF NOT EXISTS idx_attacker_ip_perf_attacker_ip
+ON public.attacker_ip_perf (attacker_ip);
 
-CREATE INDEX idx_city_id
-ON attacker_ip_perf (city_id);
+CREATE INDEX IF NOT EXISTS idx_attacker_ip_perf_city_id
+ON public.attacker_ip_perf (city_id);

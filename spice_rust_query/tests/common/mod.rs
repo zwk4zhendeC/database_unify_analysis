@@ -5,7 +5,7 @@ use clickhouse::Row;
 use serde::Deserialize;
 use spice_rust_query::{
     BenchmarkKind, BenchmarkReport, CK_DB, CK_ENDPOINT, CK_PASSWORD, CK_USER, CSV_ATTACKER_IP_FILE,
-    CSV_CITY_FILE, HOT_IP_POOL_SIZE, NONEXISTENT_IP, PERF_ITERATIONS, PERF_ROW_COUNT, PG_DB,
+    CSV_CITY_FILE, HOT_IP_POOL_SIZE, NONEXISTENT_IP, PERF_ROW_COUNT, PG_DB,
     PG_HOST, PG_PASSWORD, PG_PORT, PG_USER, build_spice_query, cached_exact_lookup_ip,
     cached_hot_ip, city_name, exact_lookup_ip_for_iteration, run_native_benchmark_case,
 };
@@ -21,7 +21,7 @@ use std::time::Duration;
 use tokio_postgres::{Client as PgClient, NoTls};
 
 const DOCKER_COMPOSE_FILE: &str = "component/docker-compose.yml";
-const RUN_REPORT_DIR: &str = ".run/report";
+const RUN_REPORT_DIR: &str = "report";
 const SPICE_PERF_DIR: &str = "spice/perf";
 const SPICE_LOG_DIR: &str = ".run/spice_logs";
 const SPICE_HTTP_ENDPOINT: &str = "127.0.0.1:8090";
@@ -115,8 +115,9 @@ pub fn expected_rows(kind: BenchmarkKind) -> usize {
     }
 }
 
-pub fn assert_report(report: &BenchmarkReport, kind: BenchmarkKind) {
-    assert_eq!(report.iterations, PERF_ITERATIONS);
+pub fn assert_report(report: &BenchmarkReport, kind: BenchmarkKind, iterations: usize, parallelism: usize) {
+    assert_eq!(report.iterations, iterations);
+    assert_eq!(report.parallelism, parallelism);
     assert_eq!(report.rows, expected_rows(kind));
 }
 
@@ -239,12 +240,12 @@ fn format_spice_markdown_row(summary: &SpiceCaseSummary) -> String {
     )
 }
 
-fn build_suite_header(source: &str, mode: &str) -> String {
+fn build_suite_header(source: &str, mode: &str, iterations: usize, parallelism: usize) -> String {
     format!(
         "# 测试报告\n\n- 数据源：{source}\n- 查询方式：{}\n- 测试总数：5\n- 迭代次数：{}\n- 并行度：{}\n- 数据规模：{}\n- 热点 IP 池大小：{}\n- 示例城市：{}",
         if mode == "spice" { "Spice" } else { "原生 SDK" },
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         PERF_ROW_COUNT,
         HOT_IP_POOL_SIZE,
         city_name(1)
@@ -260,8 +261,10 @@ fn write_report_file(source: &str, mode: &str, content: &str) -> Result<()> {
 fn print_and_write_native_suite_report(
     source: &str,
     summaries: &[NativeCaseSummary],
+    iterations: usize,
+    parallelism: usize,
 ) -> Result<()> {
-    let header = build_suite_header(source, "native");
+    let header = build_suite_header(source, "native", iterations, parallelism);
     let mut lines = vec![header.clone(), String::new(), String::from("## 测试结果"), String::new(), build_markdown_header()];
     let mut total_wall_ms = 0.0f64;
     let mut fastest: Option<(&str, f64)> = None;
@@ -303,8 +306,10 @@ fn print_and_write_spice_suite_report(
     source: &str,
     summaries: &[SpiceCaseSummary],
     total_stats: &ResourceStats,
+    iterations: usize,
+    parallelism: usize,
 ) -> Result<()> {
-    let header = build_suite_header(source, "spice");
+    let header = build_suite_header(source, "spice", iterations, parallelism);
     let mut lines = vec![header.clone(), String::new(), String::from("## 测试结果"), String::new(), build_markdown_header()];
     let mut total_wall_ms = 0.0f64;
     let mut fastest: Option<(&str, f64)> = None;
@@ -588,9 +593,11 @@ impl Drop for SpiceRuntimeHandle {
 pub async fn assert_spice_benchmark(
     source: spice_rust_query::SpiceSource,
     kind: BenchmarkKind,
+    iterations: usize,
+    parallelism: usize,
 ) -> Result<()> {
-    let report = spice_rust_query::collect_spice_benchmark(source, kind).await?;
-    assert_report(&report, kind);
+    let report = spice_rust_query::collect_spice_benchmark(source, kind, iterations, parallelism).await?;
+    assert_report(&report, kind, iterations, parallelism);
     Ok(())
 }
 
@@ -610,12 +617,12 @@ pub async fn connect_postgres() -> Result<Arc<PgClient>> {
     Ok(Arc::new(client))
 }
 
-pub async fn run_postgres_native(kind: BenchmarkKind) -> Result<BenchmarkReport> {
+pub async fn run_postgres_native(kind: BenchmarkKind, iterations: usize, parallelism: usize) -> Result<BenchmarkReport> {
     let client = connect_postgres().await?;
     run_native_benchmark_case(
         kind.name(),
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         kind.uses_warmup(),
         |iteration, parallelism| {
         let client = Arc::clone(&client);
@@ -686,7 +693,7 @@ pub async fn run_postgres_native(kind: BenchmarkKind) -> Result<BenchmarkReport>
     .await
 }
 
-pub async fn run_clickhouse_native(kind: BenchmarkKind) -> Result<BenchmarkReport> {
+pub async fn run_clickhouse_native(kind: BenchmarkKind, iterations: usize, parallelism: usize) -> Result<BenchmarkReport> {
     let client = clickhouse::Client::default()
         .with_url(CK_ENDPOINT)
         .with_user(CK_USER)
@@ -695,8 +702,8 @@ pub async fn run_clickhouse_native(kind: BenchmarkKind) -> Result<BenchmarkRepor
 
     run_native_benchmark_case(
         kind.name(),
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         kind.uses_warmup(),
         |iteration, parallelism| {
         let client = client.clone();
@@ -772,15 +779,15 @@ pub async fn run_clickhouse_native(kind: BenchmarkKind) -> Result<BenchmarkRepor
     .await
 }
 
-pub async fn run_csv_native(kind: BenchmarkKind) -> Result<BenchmarkReport> {
+pub async fn run_csv_native(kind: BenchmarkKind, iterations: usize, parallelism: usize) -> Result<BenchmarkReport> {
     let (attackers, cities) = load_csv_data()?;
     let attackers = Arc::new(attackers);
     let cities = Arc::new(cities);
 
     run_native_benchmark_case(
         kind.name(),
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         kind.uses_warmup(),
         |iteration, parallelism| {
         let attackers = Arc::clone(&attackers);
@@ -873,24 +880,24 @@ pub fn load_csv_data() -> Result<(Vec<CsvAttackerRow>, HashMap<u64, CsvCityRow>)
     Ok((attackers, cities))
 }
 
-pub fn print_header(source: &str, mode: &str, kind: BenchmarkKind) {
+pub fn print_header(source: &str, mode: &str, kind: BenchmarkKind, iterations: usize, parallelism: usize) {
     println!(
         "数据源：{source} | 查询方式：{} | 测试项：{} | 迭代次数：{} | 并行度：{} | 数据规模：{} | 示例城市：{}",
         if mode == "spice" { "Spice" } else { "原生 SDK" },
         spice_rust_query::benchmark_kind_zh(kind.name()),
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         PERF_ROW_COUNT,
         city_name(1)
     );
 }
 
-pub fn print_suite_header(source: &str, mode: &str) {
+pub fn print_suite_header(source: &str, mode: &str, iterations: usize, parallelism: usize) {
     println!(
         "数据源：{source} | 查询方式：{} | 测试总数：5 | 迭代次数：{} | 并行度：{} | 数据规模：{} | 热点 IP 池大小：{} | 示例城市：{}",
         if mode == "spice" { "Spice" } else { "原生 SDK" },
-        PERF_ITERATIONS,
-        spice_rust_query::PERF_PARALLELISM,
+        iterations,
+        parallelism,
         PERF_ROW_COUNT,
         HOT_IP_POOL_SIZE,
         city_name(1)
@@ -926,14 +933,18 @@ pub async fn restart_docker_compose() -> Result<()> {
     Ok(())
 }
 
-pub async fn run_spice_suite(source: spice_rust_query::SpiceSource) -> Result<()> {
+pub async fn run_spice_suite(
+    source: spice_rust_query::SpiceSource,
+    iterations: usize,
+    parallelism: usize,
+) -> Result<()> {
     let mut summaries = Vec::new();
     for kind in benchmark_kinds() {
         restart_docker_compose().await?;
         sleep(Duration::from_secs(3));
         let runtime = start_spice_runtime(*kind)?;
-        let report = spice_rust_query::collect_spice_benchmark(source, *kind).await?;
-        assert_report(&report, *kind);
+        let report = spice_rust_query::collect_spice_benchmark(source, *kind, iterations, parallelism).await?;
+        assert_report(&report, *kind, iterations, parallelism);
         let resource_stats = runtime.stop_and_collect()?;
         summaries.push(SpiceCaseSummary {
             kind: *kind,
@@ -977,40 +988,40 @@ pub async fn run_spice_suite(source: spice_rust_query::SpiceSource) -> Result<()
             .map(|summary| summary.resource_stats.peak_memory_mb)
             .fold(0.0, f64::max),
     };
-    print_and_write_spice_suite_report(source.label, &summaries, &total_stats)
+    print_and_write_spice_suite_report(source.label, &summaries, &total_stats, iterations, parallelism)
 }
 
-pub async fn run_native_suite_postgres() -> Result<()> {
+pub async fn run_native_suite_postgres(iterations: usize, parallelism: usize) -> Result<()> {
     let mut summaries = Vec::new();
     for kind in benchmark_kinds() {
         restart_docker_compose().await?;
-        let report = run_postgres_native(*kind).await?;
-        assert_report(&report, *kind);
+        let report = run_postgres_native(*kind, iterations, parallelism).await?;
+        assert_report(&report, *kind, iterations, parallelism);
         summaries.push(NativeCaseSummary { kind: *kind, report });
     }
-    print_and_write_native_suite_report("postgres", &summaries)
+    print_and_write_native_suite_report("postgres", &summaries, iterations, parallelism)
 }
 
-pub async fn run_native_suite_clickhouse() -> Result<()> {
+pub async fn run_native_suite_clickhouse(iterations: usize, parallelism: usize) -> Result<()> {
     let mut summaries = Vec::new();
     for kind in benchmark_kinds() {
         restart_docker_compose().await?;
-        let report = run_clickhouse_native(*kind).await?;
-        assert_report(&report, *kind);
+        let report = run_clickhouse_native(*kind, iterations, parallelism).await?;
+        assert_report(&report, *kind, iterations, parallelism);
         summaries.push(NativeCaseSummary { kind: *kind, report });
     }
-    print_and_write_native_suite_report("clickhouse", &summaries)
+    print_and_write_native_suite_report("clickhouse", &summaries, iterations, parallelism)
 }
 
-pub async fn run_native_suite_csv() -> Result<()> {
+pub async fn run_native_suite_csv(iterations: usize, parallelism: usize) -> Result<()> {
     let mut summaries = Vec::new();
     for kind in benchmark_kinds() {
-        let report = run_csv_native(*kind).await?;
-        assert_report(&report, *kind);
+        let report = run_csv_native(*kind, iterations, parallelism).await?;
+        assert_report(&report, *kind, iterations, parallelism);
         summaries.push(NativeCaseSummary { kind: *kind, report });
         // restart_docker_compose()?;
     }
-    print_and_write_native_suite_report("csv", &summaries)
+    print_and_write_native_suite_report("csv", &summaries, iterations, parallelism)
 }
 
 pub fn build_spice_sql_preview(source: spice_rust_query::SpiceSource, kind: BenchmarkKind) -> String {

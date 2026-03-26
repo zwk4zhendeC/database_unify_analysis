@@ -10,7 +10,7 @@ pub const SPICE_FLIGHT_URL: &str = "http://127.0.0.1:50012";
 pub const PERF_ROW_COUNT: u64 = 1000_0000;
 pub const PERF_CITY_COUNT: u64 = 10_0000;
 pub const PERF_BATCH_SIZE: u64 = 10_0000;
-pub const PERF_ITERATIONS: usize = 10000;
+pub const PERF_ITERATIONS: usize = 1000;
 pub const PERF_PARALLELISM: usize = 4;
 pub const TEST_WORKER_THREADS: usize = 4;
 
@@ -327,19 +327,21 @@ pub async fn run_single_source_benchmark(
     attacker_dataset: &str,
     city_dataset: &str,
     kind: BenchmarkKind,
+    iterations: usize,
+    parallelism: usize,
 ) -> Result<()> {
     let client = connect_spice().await?;
 
     println!("source={label}, attacker_dataset={attacker_dataset}, city_dataset={city_dataset}");
     println!(
         "iterations={}, row_count={}, hot_ip_pool_size={}, flight_url={}",
-        PERF_ITERATIONS, PERF_ROW_COUNT, HOT_IP_POOL_SIZE, SPICE_FLIGHT_URL
+        iterations, PERF_ROW_COUNT, HOT_IP_POOL_SIZE, SPICE_FLIGHT_URL
     );
 
     let report = run_benchmark_case(
         kind.name(),
-        PERF_ITERATIONS,
-        PERF_PARALLELISM,
+        iterations,
+        parallelism,
         kind.uses_warmup(),
         |iteration, parallelism| {
             (0..parallelism)
@@ -367,12 +369,14 @@ pub async fn run_single_source_benchmark(
 pub async fn collect_spice_benchmark(
     source: SpiceSource,
     kind: BenchmarkKind,
+    iterations: usize,
+    parallelism: usize,
 ) -> Result<BenchmarkReport> {
     let client = connect_spice().await?;
     let report = run_benchmark_case(
         kind.name(),
-        PERF_ITERATIONS,
-        PERF_PARALLELISM,
+        iterations,
+        parallelism,
         kind.uses_warmup(),
         |iteration, parallelism| {
             (0..parallelism)
