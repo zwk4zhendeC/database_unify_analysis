@@ -4,50 +4,16 @@ kind: Spicepod
 name: spice_qs
 dependencies:
 - spiceai/quickstart
-datasets:
-  - from: postgres:public.attacker_ip
-    name: pg_attacker_ip
+models:
+  # - name: gpt
+  #   from: openai:gpt-5.3-codex
+  #   params:
+  #     endpoint: https://www.right.codes/codex-free/v1
+  #     openai_api_key: sk-e9a4c1c00d9243989b185bf884aa33cb
+  #     tools: auto
+  - from: openai:Pro/zai-org/GLM-4.7
+    name: openai_model
     params:
-      pg_host: localhost
-      pg_port: 5432
-      pg_db: postgres
-      pg_user: root
-      pg_pass: 123456
-      pg_sslmode: disable
-  - from: postgres:public.city
-    name: pg_city
-    params:
-      pg_host: localhost
-      pg_port: 5432
-      pg_db: postgres
-      pg_user: root
-      pg_pass: 123456
-      pg_sslmode: disable
-  - from: clickhouse:test_db.attacker_ip
-    name: ck_attacker_ip
-    params:
-      clickhouse_host: localhost
-      clickhouse_tcp_port: 9000
-      clickhouse_db: test_db
-      clickhouse_user: default
-      clickhouse_pass: default
-      clickhouse_secure: false
-      connection_timeout: 10000
-  - from: clickhouse:test_db.city
-    name: ck_city
-    params:
-      clickhouse_host: localhost
-      clickhouse_tcp_port: 9000
-      clickhouse_db: test_db
-      clickhouse_user: default
-      clickhouse_pass: default
-      clickhouse_secure: false
-      connection_timeout: 10000
-  - from: file:data/attacker_ip.csv
-    name: csv_attacker_ip
-    params:
-      file_format: csv
-  - from: file:data/city.csv
-    name: csv_city
-    params:
-      file_format: csv
+      endpoint: https://api.siliconflow.cn/v1
+      openai_api_key: sk-prlhenclfvllsfshgxcavmzdmplbxrxlkezmfscmouevrhsr
+      tools: auto

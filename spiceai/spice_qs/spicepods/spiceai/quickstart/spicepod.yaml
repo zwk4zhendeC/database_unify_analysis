@@ -2,20 +2,12 @@ version: v1
 kind: Spicepod
 name: quickstart
 
-# datasets:
-# - from: postgres:public.nginx_logs
-#   name: nginx_logs
-#   params:
-#     pg_host: localhost
-#     pg_port: 5432
-#     pg_db: postgres
-#     pg_user: root
-#     pg_pass: 123456
-#     pg_sslmode: disable
-# - from: s3://spiceai-demo-datasets/taxi_trips/2024/
-#   name: taxi_trips
-#   description: taxi trips in s3
-#   params:
-#     file_format: parquet
-#   acceleration:
-#     enabled: true
+datasets:
+  - from: file:data/attacker_ip.csv
+    name: csv_attacker_ip
+    params:
+      file_format: csv
+  - from: file:data/city.csv
+    name: csv_city
+    params:
+      file_format: csv
